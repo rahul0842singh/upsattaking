@@ -1,52 +1,33 @@
 // src/db.mysql.js
-const fs = require('fs');
-const path = require('path');
-
-// Try to load .env from common locations (project root, parent of src, CWD)
-const envPaths = [
-  path.resolve(process.cwd(), '.env'),
-  path.resolve(__dirname, '..', '.env'),      // if src/ is the current folder
-  path.resolve(__dirname, '../..', '.env'),   // in case structure differs
-];
-
-let loadedFrom = null;
-for (const p of envPaths) {
-  if (fs.existsSync(p)) {
-    require('dotenv').config({ path: p });
-    loadedFrom = p;
-    break;
-  }
-}
-if (!loadedFrom) {
-  console.warn('⚠️  .env not found in:', envPaths.join(' | '));
-} else {
-  console.log('✅ Loaded .env from:', loadedFrom);
-}
-
+// Hard-coded MySQL connection (for debugging only; prefer env vars in production)
 const mysql = require('mysql2/promise');
 
-const DSN = process.env.MYSQL_URL;
+// Use your actual DB server hostname, NOT a Render IP.
+const DB_HOST = 'hosting12.hostingfact.in';
+const DB_PORT = 3306;
+const DB_USER = 'friendst_sattaupking';
+const DB_PASSWORD = 'Kashmir4india'; // <-- rotate this ASAP
+const DB_NAME = 'friendst_satta_king';
 
-const base = DSN || {
-  host: process.env.MYSQL_HOST || '127.0.0.1',
-  port: Number(process.env.MYSQL_PORT || 3306),
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || '',
-  database: process.env.MYSQL_DATABASE || 'satta_king',
+// If your provider requires SSL, keep CA via env (safe to leave as-is)
+const ssl = process.env.MYSQL_CA_CERT ? { ca: process.env.MYSQL_CA_CERT } : undefined;
+
+const pool = mysql.createPool({
+  host: DB_HOST,
+  port: DB_PORT,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 8,
   queueLimit: 0,
-};
+  connectTimeout: 15000,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+  ssl
+});
 
-// Optional TLS if your host requires SSL (set MYSQL_SSL=true in .env)
-if (!DSN && String(process.env.MYSQL_SSL).toLowerCase() === 'true') {
-  base.ssl = { minVersion: 'TLSv1.2' };
-}
-
-console.log('MySQL target -> host:', base.host || '[DSN]', 'port:', base.port || '[DSN]');
-
-const pool = mysql.createPool(DSN || base);
-
+// Simple helper to run queries
 async function query(sql, params = []) {
   const [rows] = await pool.execute(sql, params);
   return rows;
