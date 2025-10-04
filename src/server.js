@@ -1,40 +1,12 @@
 // src/server.js
-require('./config/loadEnv');
 
+require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const routes = require('./routes');
 const { pool } = require('./db.mysql');
-
-// ---- diagnostics: show our egress IP and DB DNS ----
-const dns = require('dns');
-const https = require('https');
-
-(function diag() {
-  try {
-    https
-      .get('https://api.ipify.org', (res) => {
-        let body = '';
-        res.on('data', (c) => (body += c));
-        res.on('end', () => console.log('[EGRESS IP]', body.trim()));
-      })
-      .on('error', (e) => console.log('[EGRESS IP] fetch failed:', e.message));
-  } catch (e) {
-    console.log('[EGRESS IP] skipped:', e.message);
-  }
-
-  const host = process.env.MYSQL_HOST || 'hosting12.hostingfact.in';
-  dns.lookup(host, { all: true }, (err, addrs) => {
-    if (err) console.log('[DNS]', err.message);
-    else
-      console.log(
-        `[DNS] ${host} ->`,
-        addrs.map((a) => a.address).join(', ')
-      );
-  });
-})();
 
 const app = express();
 app.use(cors());
